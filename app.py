@@ -57,7 +57,7 @@ def limpiar_ocupacion(valor):
 
     valor = str(valor).strip()
 
-    valor = valor.replace("%", "")
+#    valor = valor.replace("%", "")
     valor = valor.replace(",", ".")
 
     try:
