@@ -267,9 +267,9 @@ if archivo:
             .apply(
                 lambda x: f"{x:.2%}"
             )
-         )
+          )
 
-         opciones = [20, 50, 100, 200, 500, 1000]
+          opciones = [20, 50, 100, 200, 500, 1000]
 
          if len(vista) not in opciones:
             opciones.append(len(vista))
