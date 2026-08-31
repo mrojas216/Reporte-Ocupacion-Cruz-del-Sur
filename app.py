@@ -61,7 +61,7 @@ def limpiar_ocupacion(valor):
     valor = valor.replace(",", ".")
 
     try:
-        return float(valor) / 100
+        return float(valor)
     except:
         return 0
 
