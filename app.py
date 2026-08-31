@@ -259,9 +259,9 @@ if archivo:
         st.subheader("Vista previa")
 
         vista = resultado.copy()
-
+        
         for col in vista.columns[2:]:
-
+        
             vista[col] = (
                 vista[col]
                 .fillna(0)
@@ -269,7 +269,7 @@ if archivo:
                     lambda x: f"{x:.2%}"
                 )
             )
-
+        
         st.dataframe(
             vista.head(20),
             use_container_width=True
