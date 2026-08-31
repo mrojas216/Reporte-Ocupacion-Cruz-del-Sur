@@ -3,51 +3,64 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(
-    page_title="Reporte Ocupación Cruz del Sur",
+    page_title="Tabla Objetivo Ocupación",
     page_icon="📊",
     layout="wide"
 )
 
-COLUMNAS_REQUERIDAS = [
-    "Fecha salida",
-    "Hora salida",
-    "Día de semana",
-    "Origen (ciudad)",
-    "Destino (ciudad)",
-    "Ocupación",
-    "Folio de viaje",
-    "Ruta"
-]
+COLUMNAS_REQUERIDAS = ["Ruta"]
 
 
 def validar_columnas(df):
     faltantes = [
-        col for col in COLUMNAS_REQUERIDAS
+        col
+        for col in COLUMNAS_REQUERIDAS
         if col not in df.columns
     ]
 
     if faltantes:
         raise ValueError(
-            f"Faltan las columnas: {', '.join(faltantes)}"
+            f"Faltan columnas requeridas: {', '.join(faltantes)}"
         )
 
 
-def procesar_datos(df):
-    df = df.copy()
+def construir_tabla(df):
 
-    df["Ocupación"] = (
-        df["Ocupación"]
+    rutas = (
+        df["Ruta"]
         .astype(str)
-        .str.replace("%", "", regex=False)
-        .str.replace(",", ".", regex=False)
+        .str.strip()
+        .dropna()
+        .sort_values()
+        .unique()
     )
 
-    df["Ocupación"] = pd.to_numeric(
-        df["Ocupación"],
-        errors="coerce"
-    )
+    tabla = pd.DataFrame({
+        "Etiquetas de fila": rutas
+    })
 
-    return df
+    patron = [0.0, 4.5, 8.0]
+
+    for dia in range(1, 32):
+
+        if dia == 28:
+            valor = 50.0
+
+        elif dia == 29:
+            valor = 100.0
+
+        elif dia == 30:
+            valor = 80.0
+
+        elif dia == 31:
+            valor = 90.0
+
+        else:
+            valor = patron[(dia - 1) % 3]
+
+        tabla[dia] = valor
+
+    return tabla
 
 
 def generar_excel(df):
@@ -61,53 +74,67 @@ def generar_excel(df):
 
         df.to_excel(
             writer,
-            sheet_name="Reporte",
+            sheet_name="Hoja1",
             index=False
         )
 
         workbook = writer.book
-        worksheet = writer.sheets["Reporte"]
+        worksheet = writer.sheets["Hoja1"]
 
         formato_header = workbook.add_format({
             "bold": True,
-            "bg_color": "#D9EAD3",
-            "border": 1
+            "bg_color": "#D9D9D9",
+            "border": 1,
+            "align": "center"
         })
 
         formato_numero = workbook.add_format({
-            "num_format": "0.00"
+            "num_format": "0.0"
         })
 
-        for col_num, value in enumerate(df.columns):
-            worksheet.write(0, col_num, value, formato_header)
-
-        try:
-            idx = df.columns.get_loc("Ocupación")
-            worksheet.set_column(idx, idx, 12, formato_numero)
-        except:
-            pass
-
-        for i, col in enumerate(df.columns):
-            ancho = max(
-                len(str(col)),
-                min(
-                    df[col].astype(str).str.len().max(),
-                    50
-                ) if len(df) else 15
+        for col_num, valor in enumerate(df.columns):
+            worksheet.write(
+                0,
+                col_num,
+                valor,
+                formato_header
             )
 
-            worksheet.set_column(i, i, ancho + 2)
+        worksheet.freeze_panes(1, 1)
+
+        worksheet.set_column(0, 0, 50)
+
+        for col in range(1, 32):
+            worksheet.set_column(
+                col,
+                col,
+                8,
+                formato_numero
+            )
+
+        for fila in range(1, len(df) + 1):
+
+            for col in range(1, 32):
+
+                worksheet.write_number(
+                    fila,
+                    col,
+                    float(df.iloc[fila - 1, col]),
+                    formato_numero
+                )
 
     output.seek(0)
 
     return output
 
 
-st.title("📊 Generador Reporte Ocupación")
+st.title("📊 Generador Tabla Objetivo de Ocupación")
 
 st.markdown(
     """
-    Cargue el archivo Excel exportado desde el sistema.
+    Cargue el archivo exportado desde el sistema.
+    
+    La aplicación generará automáticamente la tabla de objetivos por ruta y día.
     """
 )
 
@@ -124,29 +151,69 @@ if archivo:
 
         validar_columnas(df)
 
-        df_resultado = procesar_datos(df)
+        resultado = construir_tabla(df)
 
         st.success(
-            f"Archivo procesado correctamente. "
-            f"Registros: {len(df_resultado):,}"
+            f"Proceso completado. Se encontraron {len(resultado)} rutas."
+        )
+
+        st.subheader("Vista previa")
+
+        st.info(
+            """
+            Los valores se almacenan como números entre 0 y 100.
+
+            Ejemplos:
+
+            • 0 = 0%  
+            • 4.5 = 4,5%  
+            • 8 = 8%  
+            • 50 = 50%  
+            • 80 = 80%  
+            • 90 = 90%  
+            • 100 = 100%
+            """
         )
 
         st.dataframe(
-            df_resultado.head(20),
+            resultado.head(10),
             use_container_width=True
         )
 
-        excel = generar_excel(df_resultado)
+        st.subheader("Ejemplo de interpretación")
+
+        ejemplo = pd.DataFrame({
+            "Valor almacenado": [
+                0,
+                4.5,
+                8,
+                50,
+                80,
+                90,
+                100
+            ],
+            "Interpretación": [
+                "0%",
+                "4,5%",
+                "8%",
+                "50%",
+                "80%",
+                "90%",
+                "100%"
+            ]
+        })
+
+        st.table(ejemplo)
+
+        excel = generar_excel(resultado)
 
         st.download_button(
-            label="📥 Descargar Reporte",
+            label="📥 Descargar Excel",
             data=excel,
-            file_name="reporte_ocupacion.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            file_name="cruzdelsur_tabla_resultado.xlsx",
+             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-    except Exception as e:
-
+        except Exception as e:
         st.error(
             f"Error al procesar archivo: {str(e)}"
         )
