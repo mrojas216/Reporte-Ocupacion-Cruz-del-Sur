@@ -269,7 +269,7 @@ if archivo:
             )
         )
         opciones = [20, 50, 100, 200, 500, 1000]
-         if len(vista) not in opciones:
+        if len(vista) not in opciones:
             opciones.append(len(vista))
          
          cantidad_registros = st.selectbox(
