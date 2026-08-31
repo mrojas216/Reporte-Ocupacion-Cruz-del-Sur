@@ -2,21 +2,25 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
+# =====================================================
+# CONFIGURACIÓN
+# =====================================================
+
 st.set_page_config(
     page_title="Reporte Ocupación Cruz del Sur",
     page_icon="📊",
     layout="wide"
 )
 
+# =====================================================
+# LECTURA ARCHIVO
+# =====================================================
 
 def leer_archivo(archivo):
-    """
-    Lee el archivo Excel exportado por Cruz del Sur.
-    """
 
     df = pd.read_excel(
         archivo,
-        header=1
+        engine="openpyxl"
     )
 
     df.columns = (
@@ -27,6 +31,10 @@ def leer_archivo(archivo):
 
     return df
 
+
+# =====================================================
+# VALIDACIONES
+# =====================================================
 
 def validar_columnas(df):
 
@@ -50,10 +58,14 @@ def validar_columnas(df):
         )
 
 
+# =====================================================
+# LIMPIEZA OCUPACIÓN
+# =====================================================
+
 def limpiar_ocupacion(valor):
 
     if pd.isna(valor):
-        return 0
+        return 1
 
     valor = str(valor).strip()
 
@@ -61,10 +73,14 @@ def limpiar_ocupacion(valor):
     valor = valor.replace(",", ".")
 
     try:
-        return float(valor)
+        return float(valor) / 100
     except:
         return 0
 
+
+# =====================================================
+# GENERAR TABLA
+# =====================================================
 
 def generar_tabla(df):
 
@@ -104,9 +120,7 @@ def generar_tabla(df):
         sorted(tabla.columns)
     ]
 
-    tabla.reset_index(
-        inplace=True
-    )
+    tabla.reset_index(inplace=True)
 
     tabla.rename(
         columns={
@@ -125,6 +139,10 @@ def generar_tabla(df):
 
     return tabla
 
+
+# =====================================================
+# EXCEL
+# =====================================================
 
 def generar_excel(df):
 
@@ -152,12 +170,12 @@ def generar_excel(df):
             "valign": "vcenter"
         })
 
-        formato_porcentaje = workbook.add_format({
-            "num_format": "0.00%"
-        })
-
         formato_hora = workbook.add_format({
             "align": "center"
+        })
+
+        formato_porcentaje = workbook.add_format({
+            "num_format": "0.00%"
         })
 
         for col_num, valor in enumerate(df.columns):
@@ -174,7 +192,7 @@ def generar_excel(df):
         worksheet.set_column(
             0,
             0,
-            55
+            60
         )
 
         worksheet.set_column(
@@ -184,10 +202,8 @@ def generar_excel(df):
             formato_hora
         )
 
-        for col in range(
-            2,
-            len(df.columns)
-        ):
+        for col in range(2, len(df.columns)):
+
             worksheet.set_column(
                 col,
                 col,
@@ -200,19 +216,21 @@ def generar_excel(df):
     return output
 
 
-# =====================================
-# INTERFAZ STREAMLIT
-# =====================================
+# =====================================================
+# STREAMLIT
+# =====================================================
 
 st.title("📊 Reporte de Ocupación Cruz del Sur")
 
 st.markdown("""
-Carga el archivo exportado desde Cruz del Sur para generar
-automáticamente la tabla consolidada de ocupación por:
+Carga el archivo de ocupación exportado desde Cruz del Sur.
 
-- Ruta
-- Hora de salida
-- Día del mes
+El sistema generará automáticamente una tabla consolidada:
+
+- Etiquetas de fila (Ruta)
+- Hora Salida
+- Días del mes (1-31)
+- Ocupación real en formato porcentaje
 """)
 
 archivo = st.file_uploader(
@@ -226,8 +244,12 @@ if archivo:
 
         df = leer_archivo(archivo)
 
-        with st.expander("Columnas detectadas"):
-            st.write(df.columns.tolist())
+        with st.expander(
+            "Columnas detectadas"
+        ):
+            st.write(
+                df.columns.tolist()
+            )
 
         validar_columnas(df)
 
@@ -238,7 +260,9 @@ if archivo:
             f"Filas generadas: {len(resultado)}"
         )
 
-        st.subheader("Vista previa")
+        st.subheader(
+            "Vista previa"
+        )
 
         st.dataframe(
             resultado.head(20),
@@ -246,19 +270,21 @@ if archivo:
         )
 
         st.info("""
-Los porcentajes mostrados corresponden a la columna
+Los porcentajes provienen directamente de la columna
 'Ocupación' del archivo original.
 
 Ejemplos:
 
-• 73,19 % → 73,19 %
-• 5,93 % → 5,93 %
-• 1,70 % → 1,70 %
+73,19 % → 73,19%
+5,93 % → 5,93%
+1,70 % → 1,70%
 
-El archivo Excel se exporta con formato de porcentaje.
+El Excel descargado mostrará el símbolo %.
 """)
 
-        excel = generar_excel(resultado)
+        excel = generar_excel(
+            resultado
+        )
 
         st.download_button(
             label="📥 Descargar Excel",
