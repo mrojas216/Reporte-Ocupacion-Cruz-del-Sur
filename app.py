@@ -283,10 +283,10 @@ if archivo:
             f"Mostrando {min(cantidad_registros, len(vista)):,} registros de {len(vista):,}"
         )
 
-st.dataframe(
-    vista.head(cantidad_registros),
-    use_container_width=True
-)
+        st.dataframe(
+            vista.head(cantidad_registros),
+            use_container_width=True
+        )
 
         st.dataframe(
             vista.head(cantidad_registros),
