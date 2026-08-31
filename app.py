@@ -256,7 +256,7 @@ if archivo:
             f"Filas generadas: {len(resultado)}"
         )
 
-               st.subheader("Vista previa")
+        st.subheader("Vista previa")
 
         vista = resultado.copy()
 
