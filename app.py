@@ -267,23 +267,23 @@ if archivo:
             .apply(
                 lambda x: f"{x:.2%}"
             )
-          )
+        )
 
-          opciones = [20, 50, 100, 200, 500, 1000]
+        opciones = [20, 50, 100, 200, 500, 1000]
 
-         if len(vista) not in opciones:
+        if len(vista) not in opciones:
             opciones.append(len(vista))
 
-         cantidad_registros = st.selectbox(
+        cantidad_registros = st.selectbox(
             "Cantidad de registros a visualizar",
             options=opciones,
             index=len(opciones) - 1,
             format_func=lambda x: "Todos" if x == len(vista) else str(x)
-         )
+        )
 
-         st.write(
+        st.write(
             f"Mostrando {min(cantidad_registros, len(vista)):,} registros de {len(vista):,}"
-         )
+        )
 
 st.dataframe(
     vista.head(cantidad_registros),
