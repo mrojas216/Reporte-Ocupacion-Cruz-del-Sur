@@ -32,7 +32,6 @@ def leer_archivo(archivo):
 
     return df
 
-
 # =====================================================
 # VALIDACIONES
 # =====================================================
@@ -53,11 +52,9 @@ def validar_columnas(df):
     ]
 
     if faltantes:
-
         raise Exception(
             f"Faltan columnas requeridas: {', '.join(faltantes)}"
         )
-
 
 # =====================================================
 # LIMPIEZA OCUPACIÓN
@@ -69,7 +66,6 @@ def limpiar_ocupacion(valor):
         return 0
 
     valor = str(valor).strip()
-
     valor = valor.replace("%", "")
     valor = valor.replace(",", ".")
 
@@ -77,7 +73,6 @@ def limpiar_ocupacion(valor):
         return float(valor) / 100
     except:
         return 0
-
 
 # =====================================================
 # GENERAR TABLA
@@ -87,9 +82,8 @@ def generar_tabla(df):
 
     df = df.copy()
 
-    df["Ocupación"] = (
-        df["Ocupación"]
-        .apply(limpiar_ocupacion)
+    df["Ocupación"] = df["Ocupación"].apply(
+        limpiar_ocupacion
     )
 
     df["Fecha salida"] = pd.to_datetime(
@@ -98,10 +92,7 @@ def generar_tabla(df):
         errors="coerce"
     )
 
-    df["Dia"] = (
-        df["Fecha salida"]
-        .dt.day
-    )
+    df["Dia"] = df["Fecha salida"].dt.day
 
     tabla = pd.pivot_table(
         df,
@@ -140,9 +131,8 @@ def generar_tabla(df):
 
     return tabla
 
-
 # =====================================================
-# EXCEL
+# GENERAR EXCEL
 # =====================================================
 
 def generar_excel(df):
@@ -203,19 +193,28 @@ def generar_excel(df):
             formato_hora
         )
 
+        for fila in range(len(df)):
+
+            for col in range(2, len(df.columns)):
+
+                worksheet.write_number(
+                    fila + 1,
+                    col,
+                    float(df.iloc[fila, col]),
+                    formato_porcentaje
+                )
+
         for col in range(2, len(df.columns)):
 
             worksheet.set_column(
                 col,
                 col,
-                10,
-                formato_porcentaje
+                12
             )
 
     output.seek(0)
 
     return output
-
 
 # =====================================================
 # STREAMLIT
@@ -226,12 +225,12 @@ st.title("📊 Reporte de Ocupación Cruz del Sur")
 st.markdown("""
 Carga el archivo de ocupación exportado desde Cruz del Sur.
 
-El sistema generará automáticamente una tabla consolidada:
+El sistema generará automáticamente una tabla consolidada con:
 
-- Etiquetas de fila (Ruta)
+- Ruta
 - Hora Salida
 - Días del mes (1-31)
-- Ocupación real en formato porcentaje
+- Ocupación real en porcentaje
 """)
 
 archivo = st.file_uploader(
@@ -245,12 +244,8 @@ if archivo:
 
         df = leer_archivo(archivo)
 
-        with st.expander(
-            "Columnas detectadas"
-        ):
-            st.write(
-                df.columns.tolist()
-            )
+        with st.expander("Columnas detectadas"):
+            st.write(df.columns.tolist())
 
         validar_columnas(df)
 
@@ -261,12 +256,22 @@ if archivo:
             f"Filas generadas: {len(resultado)}"
         )
 
-        st.subheader(
-            "Vista previa"
-        )
+        st.subheader("Vista previa")
+
+        vista = resultado.copy()
+
+        for col in vista.columns[2:]:
+
+            vista[col] = (
+                vista[col]
+                .fillna(0)
+                .apply(
+                    lambda x: f"{x:.2%}"
+                )
+            )
 
         st.dataframe(
-            resultado.head(20),
+            vista.head(20),
             use_container_width=True
         )
 
@@ -276,16 +281,14 @@ Los porcentajes provienen directamente de la columna
 
 Ejemplos:
 
-73,19 % → 73,19%
-5,93 % → 5,93%
-1,70 % → 1,70%
+73,19% → 73,19%
+5,93% → 5,93%
+1,70% → 1,70%
 
-El Excel descargado mostrará el símbolo %.
+La vista previa y el Excel mostrarán el símbolo %.
 """)
 
-        excel = generar_excel(
-            resultado
-        )
+        excel = generar_excel(resultado)
 
         st.download_button(
             label="📥 Descargar Excel",
