@@ -272,7 +272,7 @@ if archivo:
         if len(vista) not in opciones:
             opciones.append(len(vista))
          
-         cantidad_registros = st.selectbox(
+        cantidad_registros = st.selectbox(
             "Cantidad de registros a visualizar",
             options=opciones,
             index=len(opciones) - 1,
