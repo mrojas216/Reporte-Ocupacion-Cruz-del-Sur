@@ -256,12 +256,12 @@ if archivo:
             f"Filas generadas: {len(resultado)}"
         )
 
-        st.subheader("Vista previa")
+               st.subheader("Vista previa")
 
         vista = resultado.copy()
-        
+
         for col in vista.columns[2:]:
-        
+
             vista[col] = (
                 vista[col]
                 .fillna(0)
@@ -269,9 +269,21 @@ if archivo:
                     lambda x: f"{x:.2%}"
                 )
             )
-        
+
+        opciones = [20, 50, 100, 200, 500, 1000]
+
+        if len(vista) not in opciones:
+            opciones.append(len(vista))
+
+        cantidad_registros = st.selectbox(
+            "Cantidad de registros a visualizar",
+            options=opciones,
+            index=len(opciones) - 1,
+            format_func=lambda x: "Todos" if x == len(vista) else str(x)
+        )
+
         st.dataframe(
-            vista.head(20),
+            vista.head(cantidad_registros),
             use_container_width=True
         )
 
