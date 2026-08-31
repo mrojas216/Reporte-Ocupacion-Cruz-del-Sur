@@ -8,58 +8,99 @@ st.set_page_config(
     layout="wide"
 )
 
-COLUMNAS_REQUERIDAS = ["Ruta"]
 
+# -----------------------------
+# LOCALIZAR ENCABEZADOS
+# -----------------------------
+def detectar_fila_encabezado(df_raw):
 
-def leer_archivo_excel(archivo):
-    """
-    El archivo tiene dos filas informativas:
-    Reporte de ocupación
-    Reporte de ocupación, xx/xx/xxxx - xx/xx/xxxx
+    for i in range(min(30, len(df_raw))):
 
-    Los encabezados reales comienzan en la fila 3.
-    """
-
-    df = pd.read_excel(
-        archivo,
-        header=2
-    )
-
-    df.columns = (
-        df.columns
-        .astype(str)
-        .str.strip()
-    )
-
-    return df
-
-
-def validar_columnas(df):
-
-    faltantes = [
-        col
-        for col in COLUMNAS_REQUERIDAS
-        if col not in df.columns
-    ]
-
-    if faltantes:
-        raise ValueError(
-            f"Faltan columnas requeridas: {', '.join(faltantes)}"
+        fila = (
+            df_raw.iloc[i]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .tolist()
         )
 
+        if "Ruta" in fila:
+            return i
 
-def construir_tabla(df):
+    return None
 
-    rutas = (
-        df["Ruta"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .sort_values()
-        .unique()
+
+# -----------------------------
+# LEER ARCHIVO
+# -----------------------------
+def leer_archivo(archivo):
+
+    bruto = pd.read_excel(
+        archivo,
+        header=None,
+        dtype=str
     )
 
-    tabla = pd.DataFrame({
+    fila_header = detectar_fila_encabezado(bruto)
+
+    if fila_header is None:
+        raise Exception(
+            "No se encontró la fila de encabezados."
+        )
+
+    encabezados = (
+        bruto.iloc[fila_header]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+    datos = bruto.iloc[fila_header + 1:].copy()
+
+    datos.columns = encabezados
+
+    datos = datos.reset_index(drop=True)
+
+    datos.columns = (
+        pd.Index(datos.columns)
+        .astype(str)
+        .str.strip()
+    )
+
+    return datos
+
+
+# -----------------------------
+# BUSCAR COLUMNA RUTA
+# -----------------------------
+def localizar_columna_ruta(df):
+
+    for col in df.columns:
+
+        nombre = str(col).strip().lower()
+
+        if nombre == "ruta":
+            return col
+
+    for col in df.columns:
+
+        nombre = str(col).strip().lower()
+
+        if "ruta" in nombre:
+            return col
+
+    raise Exception(
+        f"No se encontró columna Ruta. Columnas detectadas: {list(df.columns)}"
+    )
+
+
+# -----------------------------
+# CONSTRUIR RESULTADO
+# -----------------------------
+def construir_tabla(rutas):
+
+    resultado = pd.DataFrame({
         "Etiquetas de fila": rutas
     })
 
@@ -82,11 +123,14 @@ def construir_tabla(df):
         else:
             valor = patron[(dia - 1) % 3]
 
-        tabla[dia] = valor
+        resultado[dia] = valor
 
-    return tabla
+    return resultado
 
 
+# -----------------------------
+# EXPORTAR EXCEL
+# -----------------------------
 def generar_excel(df):
 
     output = BytesIO()
@@ -112,38 +156,45 @@ def generar_excel(df):
             "align": "center"
         })
 
-        formato_numero = workbook.add_format({
+        formato_num = workbook.add_format({
             "num_format": "0.0"
         })
 
-        for col_num, valor in enumerate(df.columns):
+        for c, nombre in enumerate(df.columns):
+
             worksheet.write(
                 0,
-                col_num,
-                valor,
+                c,
+                nombre,
                 formato_header
             )
 
         worksheet.freeze_panes(1, 1)
 
-        worksheet.set_column(0, 0, 50)
+        worksheet.set_column(
+            0,
+            0,
+            55
+        )
 
         for col in range(1, 32):
+
             worksheet.set_column(
                 col,
                 col,
                 8,
-                formato_numero
+                formato_num
             )
 
         for fila in range(1, len(df) + 1):
+
             for col in range(1, 32):
 
                 worksheet.write_number(
                     fila,
                     col,
                     float(df.iloc[fila - 1, col]),
-                    formato_numero
+                    formato_num
                 )
 
     output.seek(0)
@@ -151,23 +202,13 @@ def generar_excel(df):
     return output
 
 
-# ----------------------------
-# INTERFAZ STREAMLIT
-# ----------------------------
-
-st.title("📊 Generador Tabla Objetivo de Ocupación")
-
-st.markdown(
-    """
-    Cargue el archivo exportado desde Cruz del Sur.
-
-    El programa extraerá automáticamente las rutas y generará
-    la matriz objetivo por día del mes.
-    """
-)
+# -----------------------------
+# STREAMLIT
+# -----------------------------
+st.title("📊 Tabla Objetivo Cruz del Sur")
 
 archivo = st.file_uploader(
-    "Seleccione archivo Excel",
+    "Seleccione archivo de ocupación",
     type=["xlsx"]
 )
 
@@ -175,19 +216,34 @@ if archivo is not None:
 
     try:
 
-        df = leer_archivo_excel(archivo)
+        df = leer_archivo(archivo)
 
-        validar_columnas(df)
+        st.subheader("Columnas detectadas")
 
-        resultado = construir_tabla(df)
+        st.write(list(df.columns))
 
-        st.success(
-            f"Proceso completado correctamente. "
-            f"Rutas encontradas: {len(resultado)}"
+        columna_ruta = localizar_columna_ruta(df)
+
+        rutas = (
+            df[columna_ruta]
+            .dropna()
+            .astype(str)
+            .str.strip()
         )
 
-        with st.expander("Ver columnas detectadas"):
-            st.write(df.columns.tolist())
+        rutas = rutas[
+            rutas.str.len() > 0
+        ]
+
+        rutas = sorted(
+            rutas.unique().tolist()
+        )
+
+        resultado = construir_tabla(rutas)
+
+        st.success(
+            f"Rutas detectadas: {len(rutas)}"
+        )
 
         st.subheader("Vista previa")
 
@@ -196,10 +252,12 @@ if archivo is not None:
             use_container_width=True
         )
 
-        st.subheader("Interpretación de los valores")
+        st.subheader(
+            "Interpretación valores"
+        )
 
         ejemplo = pd.DataFrame({
-            "Valor numérico": [
+            "Valor": [
                 0,
                 4.5,
                 8,
@@ -221,20 +279,9 @@ if archivo is not None:
 
         st.table(ejemplo)
 
-        st.info(
-            """
-            Los valores se guardan como números entre 0 y 100.
-
-            Ejemplo:
-            • 4.5 significa 4,5%
-            • 50 significa 50%
-            • 100 significa 100%
-
-            No se almacenan como porcentaje Excel (0.045, 0.50, 1.00).
-            """
+        excel = generar_excel(
+            resultado
         )
-
-        excel = generar_excel(resultado)
 
         st.download_button(
             label="📥 Descargar Excel",
@@ -246,5 +293,7 @@ if archivo is not None:
     except Exception as e:
 
         st.error(
-            f"Error al procesar archivo: {str(e)}"
+            f"Error: {str(e)}"
         )
+
+        st.exception(e)
