@@ -10,10 +10,13 @@ st.set_page_config(
 
 
 def leer_archivo(archivo):
+    """
+    Lee el archivo Excel exportado por Cruz del Sur.
+    """
 
     df = pd.read_excel(
         archivo,
-        header=1
+        header=0
     )
 
     df.columns = (
@@ -27,16 +30,17 @@ def leer_archivo(archivo):
 
 def validar_columnas(df):
 
-    requeridas = [
+    columnas_requeridas = [
         "Fecha salida",
+        "Hora salida",
         "Ruta",
         "Ocupación"
     ]
 
     faltantes = [
-        c
-        for c in requeridas
-        if c not in df.columns
+        col
+        for col in columnas_requeridas
+        if col not in df.columns
     ]
 
     if faltantes:
@@ -51,13 +55,13 @@ def limpiar_ocupacion(valor):
     if pd.isna(valor):
         return 0
 
-    valor = str(valor)
+    valor = str(valor).strip()
 
     valor = valor.replace("%", "")
     valor = valor.replace(",", ".")
 
     try:
-        return float(valor)
+        return float(valor) / 100
     except:
         return 0
 
@@ -77,11 +81,14 @@ def generar_tabla(df):
         errors="coerce"
     )
 
-    df["Dia"] = df["Fecha salida"].dt.day
+    df["Dia"] = (
+        df["Fecha salida"]
+        .dt.day
+    )
 
     tabla = pd.pivot_table(
         df,
-        index="Ruta",
+        index=["Ruta", "Hora salida"],
         columns="Dia",
         values="Ocupación",
         aggfunc="max",
@@ -103,10 +110,18 @@ def generar_tabla(df):
 
     tabla.rename(
         columns={
-            "Ruta": "Etiquetas de fila"
+            "Ruta": "Etiquetas de fila",
+            "Hora salida": "Hora Salida"
         },
         inplace=True
     )
+
+    columnas_finales = (
+        ["Etiquetas de fila", "Hora Salida"]
+        + list(range(1, 32))
+    )
+
+    tabla = tabla[columnas_finales]
 
     return tabla
 
@@ -129,46 +144,55 @@ def generar_excel(df):
         workbook = writer.book
         worksheet = writer.sheets["Hoja1"]
 
-        header = workbook.add_format({
+        formato_header = workbook.add_format({
             "bold": True,
-            "border": 1,
             "bg_color": "#D9D9D9",
+            "border": 1,
+            "align": "center",
+            "valign": "vcenter"
+        })
+
+        formato_porcentaje = workbook.add_format({
+            "num_format": "0.00%"
+        })
+
+        formato_hora = workbook.add_format({
             "align": "center"
         })
 
-        numero = workbook.add_format({
-            "num_format": "0.00"
-        })
-
-        for col_num, value in enumerate(df.columns):
+        for col_num, valor in enumerate(df.columns):
 
             worksheet.write(
                 0,
                 col_num,
-                value,
-                header
+                valor,
+                formato_header
             )
 
-        worksheet.freeze_panes(
-            1,
-            1
-        )
+        worksheet.freeze_panes(1, 2)
 
         worksheet.set_column(
             0,
             0,
-            50
+            55
+        )
+
+        worksheet.set_column(
+            1,
+            1,
+            12,
+            formato_hora
         )
 
         for col in range(
-            1,
+            2,
             len(df.columns)
         ):
             worksheet.set_column(
                 col,
                 col,
                 10,
-                numero
+                formato_porcentaje
             )
 
     output.seek(0)
@@ -176,9 +200,20 @@ def generar_excel(df):
     return output
 
 
-st.title(
-    "📊 Ocupación Cruz del Sur"
-)
+# =====================================
+# INTERFAZ STREAMLIT
+# =====================================
+
+st.title("📊 Reporte de Ocupación Cruz del Sur")
+
+st.markdown("""
+Carga el archivo exportado desde Cruz del Sur para generar
+automáticamente la tabla consolidada de ocupación por:
+
+- Ruta
+- Hora de salida
+- Día del mes
+""")
 
 archivo = st.file_uploader(
     "Seleccione archivo Excel",
@@ -191,47 +226,42 @@ if archivo:
 
         df = leer_archivo(archivo)
 
-        st.expander(
-            "Columnas detectadas"
-        ).write(
-            df.columns.tolist()
-        )
+        with st.expander("Columnas detectadas"):
+            st.write(df.columns.tolist())
 
         validar_columnas(df)
 
         resultado = generar_tabla(df)
 
         st.success(
-            f"Rutas detectadas: {len(resultado)}"
+            f"Proceso completado correctamente. "
+            f"Filas generadas: {len(resultado)}"
         )
 
-        st.subheader(
-            "Vista previa"
-        )
+        st.subheader("Vista previa")
 
         st.dataframe(
             resultado.head(20),
             use_container_width=True
         )
 
-        st.info(
-            """
-            Los valores corresponden a la ocupación real
-            obtenida desde la columna "Ocupación".
+        st.info("""
+Los porcentajes mostrados corresponden a la columna
+'Ocupación' del archivo original.
 
-            Ejemplos:
-            73,19% → 73.19
-            5,93% → 5.93
-            1,70% → 1.70
-            """
-        )
+Ejemplos:
 
-        excel = generar_excel(
-            resultado
-        )
+• 73,19 % → 73,19 %
+• 5,93 % → 5,93 %
+• 1,70 % → 1,70 %
+
+El archivo Excel se exporta con formato de porcentaje.
+""")
+
+        excel = generar_excel(resultado)
 
         st.download_button(
-            "📥 Descargar resultado",
+            label="📥 Descargar Excel",
             data=excel,
             file_name="cruzdelsur_tabla_resultado.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -239,5 +269,8 @@ if archivo:
 
     except Exception as e:
 
-        st.error(str(e))
+        st.error(
+            f"Error al procesar archivo: {str(e)}"
+        )
 
+        st.exception(e)
