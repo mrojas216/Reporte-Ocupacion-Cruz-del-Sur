@@ -13,7 +13,7 @@ def leer_archivo(archivo):
 
     df = pd.read_excel(
         archivo,
-        header=0
+        header=2
     )
 
     df.columns = (
