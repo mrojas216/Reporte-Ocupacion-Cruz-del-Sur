@@ -213,6 +213,7 @@ if archivo:
             file_name="cruzdelsur_tabla_resultado.xlsx",
              mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        
         except Exception as e:
         st.error(
             f"Error al procesar archivo: {str(e)}"
