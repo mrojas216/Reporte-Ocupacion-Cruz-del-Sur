@@ -20,7 +20,8 @@ def leer_archivo(archivo):
 
     df = pd.read_excel(
         archivo,
-        engine="openpyxl"
+        engine="openpyxl",
+        header=1
     )
 
     df.columns = (
