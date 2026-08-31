@@ -65,7 +65,7 @@ def validar_columnas(df):
 def limpiar_ocupacion(valor):
 
     if pd.isna(valor):
-        return 1
+        return 0
 
     valor = str(valor).strip()
 
