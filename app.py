@@ -256,19 +256,16 @@ if archivo:
             f"Filas generadas: {len(resultado)}"
         )
 
-        st.subheader("Vista previa")
-
-        vista = resultado.copy()
-
-        for col in vista.columns[2:]:
-
-            vista[col] = (
-                vista[col]
-                .fillna(0)
-                .apply(
-                    lambda x: f"{x:.2%}"
-                )
+       st.subheader("Vista previa")
+       vista = resultado.copy()
+       for col in vista.columns[2:]:
+         vista[col] = (
+            vista[col]
+            .fillna(0)
+            .apply(
+                lambda x: f"{x:.2%}"
             )
+         )
 
         opciones = [20, 50, 100, 200, 500, 1000]
 
@@ -281,6 +278,15 @@ if archivo:
             index=len(opciones) - 1,
             format_func=lambda x: "Todos" if x == len(vista) else str(x)
         )
+
+        st.write(
+            f"Mostrando {min(cantidad_registros, len(vista)):,} registros de {len(vista):,}"
+        )
+
+st.dataframe(
+    vista.head(cantidad_registros),
+    use_container_width=True
+)
 
         st.dataframe(
             vista.head(cantidad_registros),
