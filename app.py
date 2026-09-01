@@ -288,10 +288,10 @@ if archivo:
             use_container_width=True
         )
 
-        st.dataframe(
-            vista.head(cantidad_registros),
-            use_container_width=True
-        )
+#        st.dataframe(
+#            vista.head(cantidad_registros),
+#            use_container_width=True
+#        )
 
         st.info("""
 Los porcentajes provienen directamente de la columna
