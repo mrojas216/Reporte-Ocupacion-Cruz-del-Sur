@@ -42,7 +42,9 @@ def validar_columnas(df):
         "Fecha salida",
         "Hora salida",
         "Ruta",
-        "Ocupación"
+        "Ocupación",
+        "Origen",
+        "Destino"
     ]
 
     faltantes = [
@@ -276,7 +278,48 @@ if archivo:
 
         validar_columnas(df)
 
-        resultado = generar_tabla(df)
+        st.subheader("Filtros de recorrido")
+
+        col_origen, col_destino = st.columns(2)
+
+        opciones_origen = sorted(
+            df["Origen"].dropna().astype(str).str.strip().unique().tolist()
+        )
+        opciones_destino = sorted(
+            df["Destino"].dropna().astype(str).str.strip().unique().tolist()
+        )
+
+        with col_origen:
+            origenes_seleccionados = st.multiselect(
+                "Origen",
+                options=opciones_origen,
+                default=opciones_origen
+            )
+
+        with col_destino:
+            destinos_seleccionados = st.multiselect(
+                "Destino",
+                options=opciones_destino,
+                default=opciones_destino
+            )
+
+        datos_filtrados = df.copy()
+
+        if origenes_seleccionados:
+            datos_filtrados = datos_filtrados[
+                datos_filtrados["Origen"].astype(str).str.strip().isin(
+                    origenes_seleccionados
+                )
+            ]
+
+        if destinos_seleccionados:
+            datos_filtrados = datos_filtrados[
+                datos_filtrados["Destino"].astype(str).str.strip().isin(
+                    destinos_seleccionados
+                )
+            ]
+
+        resultado = generar_tabla(datos_filtrados)
 
         st.subheader("Filtro de ocupación")
 
