@@ -142,7 +142,7 @@ def generar_tabla(df):
 # GENERAR EXCEL
 # =====================================================
 
-def generar_excel(df):
+def generar_excel(df, minimo_ocupacion, maximo_ocupacion):
 
     output = BytesIO()
 
@@ -174,6 +174,10 @@ def generar_excel(df):
 
         formato_porcentaje = workbook.add_format({
             "num_format": "0.00%"
+        })
+
+        formato_resaltado = workbook.add_format({
+            "bg_color": "#FFFF00"
         })
 
         for col_num, valor in enumerate(df.columns):
@@ -218,6 +222,22 @@ def generar_excel(df):
                 col,
                 12
             )
+
+        if len(df) > 0:
+            for col in range(2, len(df.columns)):
+                worksheet.conditional_format(
+                    1,
+                    col,
+                    len(df),
+                    col,
+                    {
+                        "type": "cell",
+                        "criteria": "between",
+                        "minimum": minimo_ocupacion / 100,
+                        "maximum": maximo_ocupacion / 100,
+                        "format": formato_resaltado
+                    }
+                )
 
     output.seek(0)
 
@@ -328,8 +348,19 @@ if archivo:
             f"Mostrando {min(cantidad_registros, len(vista)):,} registros de {len(vista):,}"
         )
 
+        vista_mostrar = vista.head(cantidad_registros)
+
+        def resaltar_ocupacion(fila):
+            return [
+                "background-color: yellow"
+                if indice in columnas_dias
+                and ocupacion_en_rango.loc[fila.name, indice]
+                else ""
+                for indice in fila.index
+            ]
+
         st.dataframe(
-            vista.head(cantidad_registros),
+            vista_mostrar.style.apply(resaltar_ocupacion, axis=1),
             use_container_width=True
         )
 
@@ -351,7 +382,11 @@ Ejemplos:
 La vista previa y el Excel mostrarán el símbolo %.
 """)
 
-        excel = generar_excel(resultado_filtrado)
+        excel = generar_excel(
+            resultado_filtrado,
+            minimo_ocupacion,
+            maximo_ocupacion
+        )
 
         st.download_button(
             label="📥 Descargar Excel",
