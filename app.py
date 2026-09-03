@@ -258,14 +258,52 @@ if archivo:
 
         resultado = generar_tabla(df)
 
+        st.subheader("Filtro de ocupación")
+
+        col_minimo, col_maximo = st.columns(2)
+
+        with col_minimo:
+            minimo_ocupacion = st.number_input(
+                "Ocupación mínima (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=0.0,
+                step=1.0
+            )
+
+        with col_maximo:
+            maximo_ocupacion = st.number_input(
+                "Ocupación máxima (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=100.0,
+                step=1.0
+            )
+
+        if minimo_ocupacion > maximo_ocupacion:
+            st.error(
+                "La ocupación mínima no puede ser mayor que la máxima."
+            )
+            st.stop()
+
+        columnas_dias = resultado.columns[2:]
+        ocupacion_en_rango = resultado[columnas_dias].ge(
+            minimo_ocupacion / 100
+        ) & resultado[columnas_dias].le(
+            maximo_ocupacion / 100
+        )
+        resultado_filtrado = resultado[
+            ocupacion_en_rango.any(axis=1)
+        ].copy()
+
         st.success(
             f"Proceso completado correctamente. "
-            f"Filas generadas: {len(resultado)}"
+            f"Filas encontradas: {len(resultado_filtrado)} de {len(resultado)}"
         )
 
         st.subheader("Vista previa")
       
-        vista = resultado.copy()
+        vista = resultado_filtrado.copy()
        
         for col in vista.columns[2:]:
           vista[col] = (
@@ -313,7 +351,7 @@ Ejemplos:
 La vista previa y el Excel mostrarán el símbolo %.
 """)
 
-        excel = generar_excel(resultado)
+        excel = generar_excel(resultado_filtrado)
 
         st.download_button(
             label="📥 Descargar Excel",
