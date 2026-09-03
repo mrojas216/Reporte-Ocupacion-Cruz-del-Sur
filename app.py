@@ -43,8 +43,8 @@ def validar_columnas(df):
         "Hora salida",
         "Ruta",
         "Ocupación",
-        "Origen",
-        "Destino"
+        "Origen (ciudad)",
+        "Destino (ciudad)"
     ]
 
     faltantes = [
@@ -283,10 +283,10 @@ if archivo:
         col_origen, col_destino = st.columns(2)
 
         opciones_origen = sorted(
-            df["Origen"].dropna().astype(str).str.strip().unique().tolist()
+            df["Origen (ciudad)"].dropna().astype(str).str.strip().unique().tolist()
         )
         opciones_destino = sorted(
-            df["Destino"].dropna().astype(str).str.strip().unique().tolist()
+            df["Destino (ciudad)"].dropna().astype(str).str.strip().unique().tolist()
         )
 
         with col_origen:
@@ -307,14 +307,14 @@ if archivo:
 
         if origenes_seleccionados:
             datos_filtrados = datos_filtrados[
-                datos_filtrados["Origen"].astype(str).str.strip().isin(
+                datos_filtrados["Origen (ciudad)"].astype(str).str.strip().isin(
                     origenes_seleccionados
                 )
             ]
 
         if destinos_seleccionados:
             datos_filtrados = datos_filtrados[
-                datos_filtrados["Destino"].astype(str).str.strip().isin(
+                datos_filtrados["Destino (ciudad)"].astype(str).str.strip().isin(
                     destinos_seleccionados
                 )
             ]
