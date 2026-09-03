@@ -72,13 +72,13 @@ def limpiar_ocupacion(valor):
     valor = valor.replace(",", ".")
 
     try:
-        ocupacion =  float(valor)
+        ocupacion =  float(valor) / 100
         
     # Si supera 92%, convertir a 100%
 
-        if ocupacion > 92:
-            ocupacion = 100
-        return ocupacion / 100
+    #    if ocupacion > 92:
+    #        ocupacion = 100
+        return ocupacion 
     
     except:
         return 0
